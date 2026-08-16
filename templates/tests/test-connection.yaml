@@ -1,0 +1,52 @@
+{{/*
+A HELM TEST. Not deployed with the release — it only runs on `helm test <rel>`.
+The test hook marks it as a test; Helm creates the pod, waits, and reports
+pass/fail on exit code.
+
+Note: under ArgoCD there is no Helm release, so `helm test` does not apply to
+the ArgoCD-managed namespace. Use this when trying the chart out standalone.
+*/}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "fastapiredis.fullname" . }}-test-connection"
+  labels:
+    {{- include "fastapiredis.componentLabels" (dict "ctx" . "component" "test") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    # Keep failed test pods so you can read the logs; delete them before a re-run.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: curlimages/curl:latest
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          BASE="http://{{ include "fastapiredis.fullname" . }}-app:{{ .Values.app.service.port }}"
+
+          echo "==> 1/3 the API answers and Redis is reachable"
+          curl -sf "$BASE{{ .Values.app.probes.path }}" | grep -q '"redis":"up"'
+          echo "    ok"
+
+          {{- if .Values.redis.enabled }}
+          echo "==> 2/3 every Redis module this app needs is loaded"
+          # False here almost always means the redis image is 7.x: the JSON,
+          # Bloom, Time Series, Search and vector-set modules ship in Redis 8.
+          curl -sf "$BASE{{ .Values.app.probes.path }}" | grep -q '"all_types_available":true'
+          echo "    ok"
+          {{- else }}
+          echo "==> 2/3 bundled Redis disabled, skipping the module check"
+          {{- end }}
+
+          echo "==> 3/3 a write path works end to end (all 13 data types)"
+          curl -sf "$BASE/demo/scenario?reset=true" > /dev/null
+          echo "    ok"
+
+          echo "ALL TESTS PASSED"
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 100m, memory: 64Mi }
