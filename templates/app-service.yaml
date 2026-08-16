@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "nrmr.fullname" . }}-app
+  name: {{ include "fastapiredis.fullname" . }}-app
   labels:
-    {{- include "nrmr.componentLabels" (dict "ctx" . "component" "app") | nindent 4 }}
+    {{- include "fastapiredis.componentLabels" (dict "ctx" . "component" "app") | nindent 4 }}
 spec:
   type: {{ .Values.app.service.type }}
   ports:
@@ -19,4 +19,4 @@ spec:
       nodePort: {{ .Values.app.service.nodePort }}
       {{- end }}
   selector:
-    {{- include "nrmr.componentSelectorLabels" (dict "ctx" . "component" "app") | nindent 4 }}
+    {{- include "fastapiredis.componentSelectorLabels" (dict "ctx" . "component" "app") | nindent 4 }}

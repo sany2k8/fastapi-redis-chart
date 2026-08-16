@@ -13,7 +13,7 @@ Reminder on Go template syntax:
 {{/*
 Chart name, overridable.
 */}}
-{{- define "nrmr.name" -}}
+{{- define "fastapiredis.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -24,9 +24,10 @@ Fully qualified app name — the standard Helm idiom.
   trimSuffix "-" : trunc can leave a trailing dash, which is an INVALID name.
 
 If the release name already contains the chart name, don't repeat it:
-release "nrmr" + chart "nrmr" -> "nrmr", not "nrmr-nrmr".
+release "fastapi-redis-dev" + chart "fastapi-redis" -> "fastapi-redis-dev",
+not "fastapi-redis-dev-fastapi-redis".
 */}}
-{{- define "nrmr.fullname" -}}
+{{- define "fastapiredis.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -39,7 +40,7 @@ release "nrmr" + chart "nrmr" -> "nrmr", not "nrmr-nrmr".
 {{- end }}
 {{- end }}
 
-{{- define "nrmr.chart" -}}
+{{- define "fastapiredis.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -47,9 +48,9 @@ release "nrmr" + chart "nrmr" -> "nrmr", not "nrmr-nrmr".
 COMMON LABELS — applied to every object.
 These are the conventional labels from step 3.
 */}}
-{{- define "nrmr.labels" -}}
-helm.sh/chart: {{ include "nrmr.chart" . }}
-{{ include "nrmr.selectorLabels" . }}
+{{- define "fastapiredis.labels" -}}
+helm.sh/chart: {{ include "fastapiredis.chart" . }}
+{{ include "fastapiredis.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -60,30 +61,30 @@ app.kubernetes.io/part-of: fastapi-with-redis
 {{/*
 SELECTOR LABELS — the subset used in selectors.
 
-CRITICAL: this must be a STRICT SUBSET of nrmr.labels, and must NEVER include
+CRITICAL: this must be a STRICT SUBSET of fastapiredis.labels, and must NEVER include
 anything volatile like version or chart. A Deployment's spec.selector is
 IMMUTABLE (step 3) — put app.kubernetes.io/version in here and every chart
 upgrade fails with "field is immutable" and needs a delete+recreate.
 */}}
-{{- define "nrmr.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "nrmr.name" . }}
+{{- define "fastapiredis.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "fastapiredis.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Per-component selector labels. Call with a dict:
-  {{- include "nrmr.componentSelectorLabels" (dict "ctx" . "component" "app") }}
+  {{- include "fastapiredis.componentSelectorLabels" (dict "ctx" . "component" "app") }}
 
 `.` inside a define is the scope PASSED IN, not the root — hence the dict
 pattern to smuggle both the root context and an argument through.
 */}}
-{{- define "nrmr.componentSelectorLabels" -}}
-{{ include "nrmr.selectorLabels" .ctx }}
+{{- define "fastapiredis.componentSelectorLabels" -}}
+{{ include "fastapiredis.selectorLabels" .ctx }}
 app.kubernetes.io/component: {{ .component }}
 {{- end }}
 
-{{- define "nrmr.componentLabels" -}}
-{{ include "nrmr.labels" .ctx }}
+{{- define "fastapiredis.componentLabels" -}}
+{{ include "fastapiredis.labels" .ctx }}
 app.kubernetes.io/component: {{ .component }}
 {{- end }}
 
@@ -91,34 +92,30 @@ app.kubernetes.io/component: {{ .component }}
 The name of the Secret to use — either one the user made, or ours.
 Lets `auth.existingSecret` transparently replace the templated Secret.
 */}}
-{{- define "nrmr.secretName" -}}
+{{- define "fastapiredis.secretName" -}}
 {{- if .Values.auth.existingSecret }}
 {{- .Values.auth.existingSecret }}
 {{- else }}
-{{- printf "%s-auth" (include "nrmr.fullname" .) }}
+{{- printf "%s-auth" (include "fastapiredis.fullname" .) }}
 {{- end }}
 {{- end }}
 
-{{- define "nrmr.configMapName" -}}
-{{- printf "%s-config" (include "nrmr.fullname" .) }}
+{{- define "fastapiredis.configMapName" -}}
+{{- printf "%s-config" (include "fastapiredis.fullname" .) }}
 {{- end }}
 
 {{/*
 Service names — these become the DNS names the app connects to (step 6).
 */}}
-{{- define "nrmr.mongoServiceName" -}}
-{{- printf "%s-mongodb" (include "nrmr.fullname" .) }}
-{{- end }}
-
-{{- define "nrmr.redisServiceName" -}}
-{{- printf "%s-redis" (include "nrmr.fullname" .) }}
+{{- define "fastapiredis.redisServiceName" -}}
+{{- printf "%s-redis" (include "fastapiredis.fullname" .) }}
 {{- end }}
 
 {{/*
 The app image ref. `.Values.app.image.tag` falls back to Chart.appVersion,
 which keeps the shipped version declared in exactly one place.
 */}}
-{{- define "nrmr.appImage" -}}
+{{- define "fastapiredis.appImage" -}}
 {{- $tag := .Values.app.image.tag | default .Chart.AppVersion -}}
 {{- printf "%s:%s" .Values.app.image.repository $tag -}}
 {{- end }}

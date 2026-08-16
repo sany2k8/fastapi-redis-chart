@@ -1,7 +1,7 @@
-# Default values for the nrmr chart.
+# Default values for the fastapi-redis chart.
 # Override with -f myvalues.yaml or --set key=value.
 #
-# `helm show values ./nrmr` prints this file — so it doubles as your chart's
+# `helm show values .` prints this file — so it doubles as your chart's
 # public API documentation. Comment it like an API.
 
 # -- Override the generated name (defaults to the chart name)
@@ -37,14 +37,20 @@ app:
       cpu: 300m
       memory: 256Mi
 
-  # -- Port the container listens on. Change this for an app that is not this one.
-  containerPort: 3000
+  # -- Port the container listens on (uvicorn in the Dockerfile).
+  containerPort: 8000
 
   # -- Probes (step 13). Liveness hits this path, which must touch NO dependency:
   #    if the probe queries the database, a slow database looks like a dead app
   #    and Kubernetes restarts perfectly healthy pods.
   probes:
-    path: /api/health
+    # -- Readiness/startup path. GET /health pings Redis and lists the loaded
+    #    modules, so it is exactly right for "should this pod take traffic".
+    path: /health
+    # -- Liveness path. Deliberately NOT /health: that endpoint touches Redis,
+    #    so a Redis outage would make Kubernetes kill and restart perfectly
+    #    healthy API pods in a loop. /openapi.json is served by FastAPI itself.
+    livenessPath: /openapi.json
     startup:
       enabled: true
       failureThreshold: 30
@@ -73,8 +79,13 @@ app:
 
   # -- Non-sensitive config -> ConfigMap (step 8)
   config:
-    NODE_ENV: production
-    PORT: "3000"
+    APP_ENV: production
+    KEY_PREFIX: rdp
+    REDIS_DB: "0"
+
+  # -- Pull secrets for a private registry, e.g. [{name: ghcr-creds}].
+  #    Leave empty when the image is public.
+  imagePullSecrets: []
 
   podAnnotations: {}
   nodeSelector: {}
@@ -95,31 +106,16 @@ autoscaling:
     scaleUpStabilizationSeconds: 30
 
 # =============================================================================
-# MongoDB
-# =============================================================================
-mongodb:
-  enabled: true
-  image:
-    repository: mongo
-    tag: "7.0"
-    pullPolicy: IfNotPresent
-  persistence:
-    enabled: true
-    size: 1Gi
-    # -- Empty = cluster default StorageClass
-    storageClass: ""
-  resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { cpu: 500m, memory: 512Mi }
-
-# =============================================================================
 # Redis
 # =============================================================================
 redis:
   enabled: true
   image:
     repository: redis
-    tag: "7-alpine"
+    # -- Redis 8 bundles JSON, Bloom/CMS/Top-K, Time Series, Search and vector
+    #    sets. redis:7-alpine has NONE of them and this app's /health reports
+    #    all_types_available:false against it — pinning 8 is not optional.
+    tag: "8-alpine"
     pullPolicy: IfNotPresent
   persistence:
     enabled: true
@@ -145,14 +141,4 @@ auth:
   # -- Reference a Secret you created yourself. When set, the chart does NOT
   #    template a Secret and the values below are ignored. This is the safe path.
   existingSecret: ""
-  mongoUser: appuser
-  mongoPassword: "s3cr3t-p@ss"
   redisPassword: "r3d1s-s3cr3t"
-
-# =============================================================================
-# Seed Job (step 10) — runs as a Helm hook before install/upgrade
-# =============================================================================
-seedJob:
-  enabled: true
-  backoffLimit: 3
-  activeDeadlineSeconds: 300

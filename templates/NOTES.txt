@@ -5,15 +5,14 @@ Re-print it any time with: helm get notes <release> -n <namespace>
 */}}
 ✅ {{ .Chart.Name }}-{{ .Chart.Version }} deployed as release "{{ .Release.Name }}" (revision {{ .Release.Revision }})
 
-   App version : {{ include "nrmr.appImage" . }}
+   App version : {{ include "fastapiredis.appImage" . }}
    Namespace   : {{ .Release.Namespace }}
    Replicas    : {{ if .Values.autoscaling.enabled }}{{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} (HPA){{ else }}{{ .Values.app.replicaCount }} (fixed){{ end }}
-   MongoDB     : {{ if .Values.mongodb.enabled }}{{ include "nrmr.mongoServiceName" . }}:27017{{ if .Values.mongodb.persistence.enabled }} (PVC {{ .Values.mongodb.persistence.size }}){{ else }} (ephemeral ⚠️){{ end }}{{ else }}disabled — external{{ end }}
-   Redis       : {{ if .Values.redis.enabled }}{{ include "nrmr.redisServiceName" . }}:6379{{ if .Values.redis.persistence.enabled }} (PVC {{ .Values.redis.persistence.size }}){{ else }} (ephemeral ⚠️){{ end }}{{ else }}disabled — external{{ end }}
+   Redis       : {{ if .Values.redis.enabled }}{{ include "fastapiredis.redisServiceName" . }}:6379{{ if .Values.redis.persistence.enabled }} (PVC {{ .Values.redis.persistence.size }}){{ else }} (ephemeral ⚠️){{ end }}{{ else }}disabled — external{{ end }}
 
 1. Wait for it to come up:
 
-   kubectl rollout status deploy/{{ include "nrmr.fullname" . }}-app -n {{ .Release.Namespace }}
+   kubectl rollout status deploy/{{ include "fastapiredis.fullname" . }}-app -n {{ .Release.Namespace }}
 
 2. Reach the app:
 {{- if eq .Values.app.service.type "NodePort" }}
@@ -21,7 +20,7 @@ Re-print it any time with: helm get notes <release> -n <namespace>
    ⚠️  This is a kind-backed cluster: NodePort is NOT reachable from macOS
        (see step 6). Either port-forward, or run the socat bridge:
 
-   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "nrmr.fullname" . }}-app 8080:{{ .Values.app.service.port }}
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "fastapiredis.fullname" . }}-app 8080:{{ .Values.app.service.port }}
    # -> http://localhost:8080
 
    # or, for a stable NodePort URL:
@@ -31,20 +30,20 @@ Re-print it any time with: helm get notes <release> -n <namespace>
    # -> http://localhost:{{ .Values.app.service.nodePort }}
 {{- else if eq .Values.app.service.type "LoadBalancer" }}
 
-   kubectl get svc -n {{ .Release.Namespace }} {{ include "nrmr.fullname" . }}-app -w
+   kubectl get svc -n {{ .Release.Namespace }} {{ include "fastapiredis.fullname" . }}-app -w
    # wait for EXTERNAL-IP, then http://<EXTERNAL-IP>:{{ .Values.app.service.port }}
 {{- else }}
 
-   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "nrmr.fullname" . }}-app 8080:{{ .Values.app.service.port }}
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "fastapiredis.fullname" . }}-app 8080:{{ .Values.app.service.port }}
    # -> http://localhost:8080
 {{- end }}
 
 3. Try it:
 
-   curl localhost:8080/api/health
-   curl localhost:8080/api/         # reports which app version served you
-   curl localhost:8080/api/items    # seeded by the pre-install hook
-   curl localhost:8080/api/counter  # redis
+   curl localhost:8080/health          # redis up? which modules are loaded?
+   curl localhost:8080/docs            # the interactive API browser
+   curl localhost:8080/demo/scenario   # exercises all 13 Redis data types
+   curl localhost:8080/demo/keys       # what those types wrote
 
 4. Verify the release:
 
@@ -56,8 +55,6 @@ Re-print it any time with: helm get notes <release> -n <namespace>
 ⚠️  SECURITY: credentials came from values.yaml in PLAINTEXT. Fine for a lab.
     For real, set `auth.existingSecret` to a Secret you manage out-of-band
     (SOPS / External Secrets / Vault), and the chart will stop templating one.
-{{- end }}
-{{- if and .Values.autoscaling.enabled (not .Values.mongodb.enabled) }}
 {{- end }}
 {{- if .Values.autoscaling.enabled }}
 
