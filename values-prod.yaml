@@ -2,19 +2,19 @@
 app:
   replicaCount: 3
   image:
-    tag: v2
+    tag: "main"          # pin a real SHA here when promoting deliberately
   service:
     type: NodePort
-    # 30301, not 30300: step 6's app-nodeport Service already owns 30300, and
-    # nodePorts are CLUSTER-WIDE (namespaces don't isolate them). Using 30301
-    # lets the Helm release coexist with the step-by-step manifests.
-    nodePort: 30301
+    # nodePorts are CLUSTER-WIDE — namespaces do not isolate them, so this must
+    # not collide with any other service in the cluster.
+    nodePort: 30302
   resources:
-    requests: { cpu: 100m, memory: 96Mi }
-    limits:   { cpu: 300m, memory: 256Mi }
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
   config:
-    NODE_ENV: production
-    PORT: "3000"
+    APP_ENV: production
+    KEY_PREFIX: rdp
+    REDIS_DB: "0"
   preStopSleepSeconds: 5
   minReadySeconds: 5
 
@@ -27,7 +27,7 @@ app:
             topologyKey: kubernetes.io/hostname
             labelSelector:
               matchLabels:
-                app.kubernetes.io/name: nrmr
+                app.kubernetes.io/name: fastapi-redis
                 app.kubernetes.io/component: app
 
 autoscaling:
@@ -38,10 +38,6 @@ autoscaling:
   behavior:
     scaleDownStabilizationSeconds: 300   # the production default — scale in slow
 
-mongodb:
-  persistence:
-    enabled: true
-    size: 2Gi
 redis:
   persistence:
     enabled: true
@@ -49,6 +45,4 @@ redis:
 
 # In a real prod you would NOT put these here — see auth.existingSecret.
 auth:
-  mongoUser: appuser
-  mongoPassword: "s3cr3t-p@ss"
   redisPassword: "r3d1s-s3cr3t"

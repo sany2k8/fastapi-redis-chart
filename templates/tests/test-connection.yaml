@@ -1,16 +1,17 @@
 {{/*
 A HELM TEST. Not deployed with the release — it only runs on `helm test <rel>`.
-The test-success hook marks it as a test; Helm creates the pod, waits, and
-reports pass/fail on exit code.
+The test hook marks it as a test; Helm creates the pod, waits, and reports
+pass/fail on exit code.
 
-This is your smoke test. Wire it into CI after `helm upgrade --wait`.
+Note: under ArgoCD there is no Helm release, so `helm test` does not apply to
+the ArgoCD-managed namespace. Use this when trying the chart out standalone.
 */}}
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "{{ include "nrmr.fullname" . }}-test-connection"
+  name: "{{ include "fastapiredis.fullname" . }}-test-connection"
   labels:
-    {{- include "nrmr.componentLabels" (dict "ctx" . "component" "test") | nindent 4 }}
+    {{- include "fastapiredis.componentLabels" (dict "ctx" . "component" "test") | nindent 4 }}
   annotations:
     "helm.sh/hook": test
     # Keep failed test pods so you can read the logs; delete them before a re-run.
@@ -25,33 +26,25 @@ spec:
         - -c
         - |
           set -e
-          BASE="http://{{ include "nrmr.fullname" . }}-app:{{ .Values.app.service.port }}"
+          BASE="http://{{ include "fastapiredis.fullname" . }}-app:{{ .Values.app.service.port }}"
 
-          echo "==> 1/4 health"
-          curl -sf "$BASE/api/health" | grep -q '"status":"ok"'
+          echo "==> 1/3 the API answers and Redis is reachable"
+          curl -sf "$BASE{{ .Values.app.probes.path }}" | grep -q '"redis":"up"'
           echo "    ok"
-
-          echo "==> 2/4 app reports its version"
-          curl -sf "$BASE/api/" | grep -q '"version"'
-          echo "    ok"
-
-          {{- if .Values.mongodb.enabled }}
-          echo "==> 3/4 mongo reachable + authenticated (writes a doc)"
-          curl -sf -X POST "$BASE/api/items" \
-            -H 'Content-Type: application/json' \
-            -d '{"name":"helm-test-'"$(date +%s)"'"}' | grep -q '"_id"'
-          echo "    ok"
-          {{- else }}
-          echo "==> 3/4 mongo disabled, skipping"
-          {{- end }}
 
           {{- if .Values.redis.enabled }}
-          echo "==> 4/4 redis reachable + authenticated"
-          curl -sf "$BASE/api/counter" | grep -q '"hit_counter"'
+          echo "==> 2/3 every Redis module this app needs is loaded"
+          # False here almost always means the redis image is 7.x: the JSON,
+          # Bloom, Time Series, Search and vector-set modules ship in Redis 8.
+          curl -sf "$BASE{{ .Values.app.probes.path }}" | grep -q '"all_types_available":true'
           echo "    ok"
           {{- else }}
-          echo "==> 4/4 redis disabled, skipping"
+          echo "==> 2/3 bundled Redis disabled, skipping the module check"
           {{- end }}
+
+          echo "==> 3/3 a write path works end to end (all 13 data types)"
+          curl -sf "$BASE/demo/scenario?reset=true" > /dev/null
+          echo "    ok"
 
           echo "ALL TESTS PASSED"
       resources:

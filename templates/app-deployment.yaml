@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "nrmr.fullname" . }}-app
+  name: {{ include "fastapiredis.fullname" . }}-app
   labels:
-    {{- include "nrmr.componentLabels" (dict "ctx" . "component" "app") | nindent 4 }}
+    {{- include "fastapiredis.componentLabels" (dict "ctx" . "component" "app") | nindent 4 }}
   annotations:
-    kubernetes.io/change-cause: {{ printf "Helm %s to %s (revision %d)" .Release.Name (include "nrmr.appImage" .) .Release.Revision | quote }}
+    kubernetes.io/change-cause: {{ printf "Helm %s to %s (revision %d)" .Release.Name (include "fastapiredis.appImage" .) .Release.Revision | quote }}
 spec:
   {{/*
     THE HPA CONFLICT (step 11). If autoscaling is on, omit `replicas` entirely.
@@ -25,11 +25,11 @@ spec:
       maxSurge: {{ .Values.app.strategy.maxSurge }}
   selector:
     matchLabels:
-      {{- include "nrmr.componentSelectorLabels" (dict "ctx" . "component" "app") | nindent 6 }}
+      {{- include "fastapiredis.componentSelectorLabels" (dict "ctx" . "component" "app") | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "nrmr.componentLabels" (dict "ctx" . "component" "app") | nindent 8 }}
+        {{- include "fastapiredis.componentLabels" (dict "ctx" . "component" "app") | nindent 8 }}
       annotations:
         {{/*
           ★ THE CHECKSUM TRICK ★  — this is the single most valuable idiom in
@@ -49,10 +49,14 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      {{- with .Values.app.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       terminationGracePeriodSeconds: {{ .Values.app.terminationGracePeriodSeconds }}
       containers:
         - name: app
-          image: {{ include "nrmr.appImage" . | quote }}
+          image: {{ include "fastapiredis.appImage" . | quote }}
           imagePullPolicy: {{ .Values.app.image.pullPolicy }}
           ports:
             - name: http
@@ -60,9 +64,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "nrmr.configMapName" . }}
+                name: {{ include "fastapiredis.configMapName" . }}
             - secretRef:
-                name: {{ include "nrmr.secretName" . }}
+                name: {{ include "fastapiredis.secretName" . }}
           env:
             - name: POD_NAME
               valueFrom:
@@ -80,9 +84,10 @@ spec:
 
           {{- if .Values.app.probes.liveness.enabled }}
           livenessProbe:
-            # This path must touch NO dependency — see step 13 for why that matters
+            # NOT .probes.path: that one pings Redis, and a Redis outage must not
+            # get healthy API pods restarted in a loop — see step 13.
             httpGet:
-              path: {{ .Values.app.probes.path }}
+              path: {{ .Values.app.probes.livenessPath }}
               port: http
             periodSeconds: {{ .Values.app.probes.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.app.probes.liveness.timeoutSeconds }}
@@ -117,7 +122,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "nrmr.configMapName" . }}
+            name: {{ include "fastapiredis.configMapName" . }}
             items:
               - key: app-info.json
                 path: app-info.json

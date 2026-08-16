@@ -1,28 +1,28 @@
-# DEV: small, fast, disposable.
+# DEV: small, fast, disposable. This is the file ArgoCD renders, and the file
+# CI rewrites — see README.
 app:
   replicaCount: 1
   image:
-    tag: "42428d5" # CI rewrites this line on every push to main
+    tag: "main"          # CI rewrites this line on every push to main
   service:
     type: ClusterIP
   resources:
-    requests: {cpu: 50m, memory: 64Mi}
-    limits: {cpu: 200m, memory: 192Mi}
+    requests: { cpu: 50m, memory: 96Mi }
+    limits:   { cpu: 300m, memory: 256Mi }
   config:
-    NODE_ENV: development
-    PORT: "3000"
+    APP_ENV: dev
+    KEY_PREFIX: rdp
+    REDIS_DB: "0"
   # no graceful-shutdown wait in dev — restart fast
   preStopSleepSeconds: 0
   minReadySeconds: 0
+
 autoscaling:
-  enabled: false # no HPA in dev
-mongodb:
-  persistence:
-    enabled: false # ephemeral — wipe on every restart, deliberately
+  enabled: false         # no HPA in dev
+
 redis:
   persistence:
-    enabled: false
+    enabled: false       # ephemeral — wiped on every restart, deliberately
+
 auth:
-  mongoUser: devuser
-  mongoPassword: "dev-p@ss"
   redisPassword: "dev-redis"
