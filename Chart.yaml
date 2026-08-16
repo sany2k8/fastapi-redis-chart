@@ -19,9 +19,9 @@ version: 0.1.0
 appVersion: "v2"
 
 keywords: [node, react, mongodb, redis, kubernetes-lab]
-home: https://github.com/sany2k8/node-react-mongo-redis
+home: https://github.com/sany2k8/fastapi-with-redis
 sources:
-  - https://github.com/sany2k8/node-react-mongo-redis
+  - https://github.com/sany2k8/fastapi-with-redis
 
 maintainers:
   - name: sany2k8

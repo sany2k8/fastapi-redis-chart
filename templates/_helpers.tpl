@@ -54,7 +54,7 @@ helm.sh/chart: {{ include "nrmr.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: node-react-mongo-redis
+app.kubernetes.io/part-of: fastapi-with-redis
 {{- end }}
 
 {{/*

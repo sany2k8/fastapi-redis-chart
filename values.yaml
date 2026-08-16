@@ -16,7 +16,7 @@ app:
   replicaCount: 3
 
   image:
-    repository: ghcr.io/sany2k8/node-react-mongo-redis
+    repository: ghcr.io/sany2k8/fastapi-with-redis
     # -- Image tag. Empty = use Chart.appVersion. This is the idiomatic default:
     #    it keeps the shipped app version in one place (Chart.yaml).
     tag: ""

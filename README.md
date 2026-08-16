@@ -1,6 +1,6 @@
 # nrmr — Helm Chart
 
-Helm chart for deploying the full [node-react-mongo-redis](https://github.com/sany2k8/node-react-mongo-redis) stack to Kubernetes in one release: Express + React app, MongoDB, Redis, credentials, database seeding, health probes, and optional autoscaling.
+Helm chart for deploying the full [fastapi-with-redis](https://github.com/sany2k8/fastapi-with-redis) stack to Kubernetes in one release: Express + React app, MongoDB, Redis, credentials, database seeding, health probes, and optional autoscaling.
 
 ## How this repo is used
 
@@ -22,7 +22,7 @@ Two rules follow from that:
 
 | Component | Kind | Notes |
 |-----------|------|-------|
-| **App** | Deployment + Service | Express API + React frontend (`ghcr.io/sany2k8/node-react-mongo-redis`) |
+| **App** | Deployment + Service | Express API + React frontend (`ghcr.io/sany2k8/fastapi-with-redis`) |
 | **MongoDB** | Deployment + Service + PVC | Optional; can be disabled for an external database |
 | **Redis** | Deployment + Service + PVC | Optional; can be disabled for an external cache |
 | **Config** | ConfigMap | Non-sensitive env (hosts, ports, `NODE_ENV`) |
@@ -103,7 +103,7 @@ helm show values .
 app:
   replicaCount: 3
   image:
-    repository: ghcr.io/sany2k8/node-react-mongo-redis
+    repository: ghcr.io/sany2k8/fastapi-with-redis
     tag: v2                    # empty = Chart.appVersion
   service:
     type: ClusterIP            # ClusterIP | NodePort | LoadBalancer
@@ -319,8 +319,8 @@ helm template myapp-dev . -f values-dev.yaml | less
 
 ## Related links
 
-- **Application source:** [github.com/sany2k8/node-react-mongo-redis](https://github.com/sany2k8/node-react-mongo-redis)
-- **Container image:** `ghcr.io/sany2k8/node-react-mongo-redis`
+- **Application source:** [github.com/sany2k8/fastapi-with-redis](https://github.com/sany2k8/fastapi-with-redis)
+- **Container image:** `ghcr.io/sany2k8/fastapi-with-redis`
 - **Helm docs:** [helm.sh/docs](https://helm.sh/docs/)
 
 ## License
